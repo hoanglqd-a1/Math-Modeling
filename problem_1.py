@@ -1,100 +1,68 @@
-import gamspy
 from gamspy import Container, Set, Parameter, Variable, Equation, Model, Sum, Sense
 import sys
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from helper import printOptimal
 
 def main():
     n = 8
     m = 5
-    D_1 = np.random.binomial(10, 0.5, n)
-    print("D1: ", D_1)
-    D_2 = np.random.binomial(10, 0.5, n)
-    print("D2: ", D_2)
-    
-    coeff = np.random.randint(10, size=m)
-    print("coeff: ", coeff)
-    s     = np.array([1,1,1,1,1])
-    print("s: ", s)
-    l_q   = np.random.randint(10, size=n)
-    print("l-q= ", l_q)
-    matrix_A= np.zeros(m*n).reshape(m, n)
-    for i in range(m):
-        for j in range(n):
-            matrix_A[i][j] = np.random.randint(5)
-    '''
-    print("input coefficience of objective function")
-    for i in range (n):
-        coeff[i] = f.readline()
-
-    print("input right-hand side")
-    for i in range (m):
-        rhs[i] = f.readline()
-    
-    print("input matrix")
-    for i in range (m):
-        for j in range (n):
-            matrix_A[i][j] = f.readline()
-    '''
-    n_index = np.arange(n)
-    m_index = np.arange(m)
-    K = np.array([0, 1])
+    #2 scenarios D
+    D1 = np.random.binomial(10, 0.5, n)
+    D2 = np.random.binomial(10, 0.5, n)
+    print(D1)
+    print(D2)
+    #vector b: preorder cost bj per unit of part j
+    b = np.array([2, 2, 3, 4, 5])
+    #vector s: savage value where sj < bj
+    s = np.array([1, 1, 1, 1, 1])
+    #vector c: c = (ci:= li − qi) are cost coefficients
+    c = np.array([-44, -47, -44, -45, -48, -47, -42, -46])
+    #matrix A: a unit of product i requires aij units of part j
+    matrix_A=np.array([ [2., 4., 3., 4., 4.],
+                        [0., 0., 4., 0., 3.],
+                        [1., 1., 1., 0., 2.],
+                        [0., 2., 1., 0., 4.],
+                        [1., 3., 0., 3., 3.],
+                        [4., 2., 4., 0., 4.],
+                        [0., 1., 0., 0., 3.],
+                        [0., 4., 3., 3., 0.]])
+    #build model
+    set_n = np.arange(n)
+    set_m = np.arange(m)
     
     model = Container()
-    i = Set(container=model, name='index_of_variables', records=n_index)
-    j = Set(container=model, name='index_of_constraints', records=m_index)
-    #k = Set(container=model, name='scenarios', records=K)
-    S = Parameter(
-        container=model,
-        name='S',
-        domain=j,
-        description='savage',
-        records=s,
+    i = Set(container=model, name='set_n', records=set_n)
+    j = Set(container=model, name='set_m', records=set_m)
+    #Parameters
+    B = Parameter(
+        container=model, name='b', domain=j, description='preorder cost', records=b,
     )
-    L_Q = Parameter(
-        container=model,
-        name='LQ',
-        domain=i,
-        description='LQ',
-        records=l_q,
+    S = Parameter(
+        container=model, name='S', domain=j, description='savage cost', records=s,
+    )
+    C = Parameter(
+        container=model, name='C', domain=i, description='cost coefficents', records=c,
     )
     d1 = Parameter(
-        container=model,
-        name='d1',
-        domain=i,
-        description='demand_1',
-        records=D_1,
+        container=model, name='d1', domain=i, description='demand_1', records=D1,
     )
     d2 = Parameter(
-        container=model,
-        name='d2',
-        domain=i,
-        description='demand_2',
-        records=D_2,
-    )
-    c = Parameter(
-        container=model,
-        name='c',
-        domain=j,
-        description='coefficient of objective function',
-        records=coeff,
+        container=model, name='d2', domain=i, description='demand_2', records=D2,
     )
     A = Parameter(
         container=model,
         name="A",
-        domain=[j, i],
+        domain=[i, j],
         description="matrix A",
         records=matrix_A,
-    )   
+    )
+    #Decision variable x, y1, y2, z1, z2
     x = Variable(
         container=model,
         name="x",
         domain=j,
         type="Positive",
         description="x_decision variable",
-    )
+)
     y1 = Variable(
         container=model,
         name='y1',
@@ -123,31 +91,34 @@ def main():
         type='Positive',
         description='z2_decision variable',
     )
-    z1_constraints = Equation(
-        container=model, name="z1_constraints", domain=i, description="z1constraints"
+    #constraints
+    z1_ctr = Equation(
+        container=model, name="z1_constraints", domain=i, description="z1ctr"
     )
-    z1_constraints[i] = z1[i] <= d1[i]
-    z2_constraints = Equation(
-        container=model, name="z2_constraints", domain=i, description="z2constraints"
+    z1_ctr[i] = z1[i] <= d1[i]
+    z2_ctr = Equation(
+            container=model, name="z2_constraints", domain=i, description="z2ctr"
     )
-    z2_constraints[i] = z2[i] <= d2[i]
-    y1_constraints = Equation(
-        container=model, name="y1_constraints", domain=j, description="c1"
+    z2_ctr[i] = z2[i] <= d2[i]
+    y1_ctr = Equation(
+            container=model, name="y1_constraints", domain=j, description="c1ctr"
     )
-    y1_constraints[j] = y1[j] == x[j] - Sum(i, A[j, i]*z1[i])
-    y2_constraints = Equation(
-        container=model, name="y2_constraints", domain=j, description="c2"
+    y1_ctr[j] = y1[j] == x[j] - Sum(i, A[i, j]*z1[i])
+    y2_ctr = Equation(
+            container=model, name="y2_constraints", domain=j, description="c2ctr"
     )
-    y2_constraints[j] = y2[j] == x[j] - Sum(i, A[j, i]*z2[i])
-    obj = Sum(j, c[j]*x[j]) + 0.5*(Sum(i, L_Q[i] * z1[i]) - Sum(j, S[j] * y1[j])) + 0.5*(Sum(i, L_Q[i] * z2[i]) - Sum(j, S[j] * y2[j]))
+    y2_ctr[j] = y2[j] == x[j] - Sum(i, A[i, j]*z2[i])
+    #Objective function
+    obj = Sum(j, B[j]*x[j]) + 0.5*(Sum(i, C[i] * z1[i]) - Sum(j, S[j] * y1[j])) + 0.5*(Sum(i, C[i] * z2[i]) - Sum(j, S[j] * y2[j]))
     transport = Model(
         model,
         name="linear_programming",
-        equations=[z1_constraints, z2_constraints, y1_constraints, y2_constraints],
+        equations=[z1_ctr, z2_ctr, y1_ctr, y2_ctr],
         problem="LP",
         sense=Sense.MIN,
         objective=obj,
     )   
+    #Solve the optimization problem
     transport.solve(output=sys.stdout)
     print(transport.objective_value)
 
