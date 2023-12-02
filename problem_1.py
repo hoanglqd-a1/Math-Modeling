@@ -60,35 +60,35 @@ def main():
         container=model,
         name="x",
         domain=j,
-        type="Positive",
+        type="Integer",
         description="x_decision variable",
 )
     y1 = Variable(
         container=model,
         name='y1',
         domain=j,
-        type='Positive',
+        type='Integer',
         description='y1_decision variable',
     )
     y2 = Variable(
         container=model,
         name='y2',
         domain=j,
-        type='Positive',
+        type='Integer',
         description='y2_decision variable',
     )
     z1 = Variable(
         container=model,
         name='z1',
         domain=i,
-        type='Positive',
+        type='Integer',
         description='z1_decision variable',
     )
     z2 = Variable(
         container=model,
         name='z2',
         domain=i,
-        type='Positive',
+        type='Integer',
         description='z2_decision variable',
     )
     #constraints
@@ -112,15 +112,20 @@ def main():
     obj = Sum(j, B[j]*x[j]) + 0.5*(Sum(i, C[i] * z1[i]) - Sum(j, S[j] * y1[j])) + 0.5*(Sum(i, C[i] * z2[i]) - Sum(j, S[j] * y2[j]))
     transport = Model(
         model,
-        name="linear_programming",
+        name="Problem1_solver",
         equations=[z1_ctr, z2_ctr, y1_ctr, y2_ctr],
-        problem="LP",
+        problem="MIP",
         sense=Sense.MIN,
         objective=obj,
     )   
     #Solve the optimization problem
     transport.solve(output=sys.stdout)
-    print(transport.objective_value)
+    print("Optimal value: ", transport.objective_value)
+    print("x\n", x.records)
+    print("y1\n", y1.records)
+    print("y2\n", y2.records)
+    print("z1\n", z1.records)
+    print("z2\n", z2.records)
 
 if __name__ == '__main__':
     main()

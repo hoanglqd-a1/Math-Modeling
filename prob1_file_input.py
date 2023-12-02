@@ -20,7 +20,6 @@ def main():
     c = np.array([int(num) for num in file.readline().split(" ", n-1)])
     print(c)
     #matrix A: a unit of product i requires aij units of part j
-    print("Enter matrix A: ")
     A = [[] for _ in range(n)]
     for i in range(n):
         A[i] = [int(num) for num in file.readline().split(" ", m-1)]
@@ -60,35 +59,35 @@ def main():
         container=model,
         name="x",
         domain=j,
-        type="Positive",
+        type="integer",
         description="x_decision variable",
-)
+    )
     y1 = Variable(
         container=model,
         name='y1',
         domain=j,
-        type='Positive',
+        type="integer",
         description='y1_decision variable',
     )
     y2 = Variable(
         container=model,
         name='y2',
         domain=j,
-        type='Positive',
+        type="integer",
         description='y2_decision variable',
     )
     z1 = Variable(
         container=model,
         name='z1',
         domain=i,
-        type='Positive',
+        type="integer",
         description='z1_decision variable',
     )
     z2 = Variable(
         container=model,
         name='z2',
         domain=i,
-        type='Positive',
+        type="integer",
         description='z2_decision variable',
     )
     #constraints
@@ -112,15 +111,20 @@ def main():
     obj = Sum(j, B[j]*x[j]) + 0.5*(Sum(i, C[i] * z1[i]) - Sum(j, S[j] * y1[j])) + 0.5*(Sum(i, C[i] * z2[i]) - Sum(j, S[j] * y2[j]))
     transport = Model(
         model,
-        name="linear_programming",
+        name="problem_1_solver",
         equations=[z1_ctr, z2_ctr, y1_ctr, y2_ctr],
-        problem="LP",
+        problem="MIP",
         sense=Sense.MIN,
         objective=obj,
     )   
     #Solve the optimization problem
     transport.solve(output=sys.stdout)
     print(transport.objective_value)
+    print("x\n", x.records)
+    print("y1\n", y1.records)
+    print("y2\n", y2.records)
+    print("z1\n", z1.records)
+    print("z2\n", z2.records)
     file.close()
 
 if __name__ == '__main__':
